@@ -3,7 +3,9 @@ package main
 import "../leveldb"
 
 func main() {
-	leveldb.A = 2
+	options := leveldb.NewOptions()
+	
+	var db *leveldb.DB 
 
-	leveldb.Test()
+	leveldb.Open(*options, "/tmp/testdb", &db)
 }

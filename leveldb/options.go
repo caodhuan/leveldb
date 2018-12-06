@@ -23,6 +23,12 @@ type Options struct {
 	FilterPolicy		FilterPolicy
 }
 
+type ReadOptions struct {
+}
+
+type WriteOptions struct {
+}
+
 func NewOptions() *Options {
 	return &Options {
 		Compartor: BytewiseComparator(),
