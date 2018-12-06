@@ -18,11 +18,11 @@ const(
 	kIOError
 )
 
-func (this Status) OK() bool {
+func (this *Status) OK() bool {
 	return this.state == kOK
 }
 
-func (this Status) IsNotFound() bool {
+func (this *Status) IsNotFound() bool {
 	return this.state == kNotFound
 }
 

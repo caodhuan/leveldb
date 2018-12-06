@@ -12,6 +12,9 @@ type Compartor interface {
 	FindShortSuccessor(key *string)
 }
 
+type InternalKeyComparator struct {
+
+}
 
 func BytewiseComparator() Compartor {
 	return &bytewiseComparator{}
@@ -21,15 +24,15 @@ func BytewiseComparator() Compartor {
 type bytewiseComparator struct {
 }
 
-func (this bytewiseComparator) Compare(a string, b string) int {
+func (this *bytewiseComparator) Compare(a string, b string) int {
 	return strings.Compare(a, b)
 }
 
-func (this bytewiseComparator) Name() string {
+func (this *bytewiseComparator) Name() string {
 	return "leveldb.BytewiseComparator"
 }
 
-func (this bytewiseComparator) FindShortestSeparator(start *string, limit string) {
+func (this *bytewiseComparator) FindShortestSeparator(start *string, limit string) {
 	minLength := utilties.Min(len(*start), len(limit))
 	diffIndex := 0
 	for((diffIndex < minLength) && (*start)[diffIndex] == limit[diffIndex]) {
@@ -50,7 +53,7 @@ func (this bytewiseComparator) FindShortestSeparator(start *string, limit string
 	}
 }
 
-func (this bytewiseComparator) FindShortSuccessor(key *string) {
+func (this *bytewiseComparator) FindShortSuccessor(key *string) {
 	for i, c := range *key {
 		if c != 0xFF {
 			(*key) = (*key)[0: i]
