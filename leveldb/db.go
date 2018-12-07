@@ -36,13 +36,20 @@ func init() {
 	fmt.Printf("Hello world!\n")
 }
 
-func Open(options Options, name string, db **DB) Status {
-	db = nil
-	// impl := &dbImpl {
-	// 	options: options,
-	// }
+func Open(options Options, name string, db *DB) Status {
+	*db = nil
+	impl := &dbImpl {
+		options: options,
+	}
 	s := OK()
 
+	if s.OK() {
+		*db = impl
+	}
+	var defaultE defaultEnv
+	if defaultE == DefaultEnv() {
+		fmt.Printf("Hello world!``1111\n")
+	}
 	return s
 }
 
