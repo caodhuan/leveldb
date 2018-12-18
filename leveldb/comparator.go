@@ -12,8 +12,8 @@ type Compartor interface {
 	FindShortSuccessor(key *string)
 }
 
-type InternalKeyComparator struct {
-
+type internalKeyComparator struct {
+	userComparator Compartor
 }
 
 func BytewiseComparator() Compartor {

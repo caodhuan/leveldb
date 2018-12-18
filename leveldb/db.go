@@ -17,7 +17,7 @@ type DB interface {
 
 type dbImpl struct {
 	env *Env
-	internalComparator  InternalKeyComparator
+	internalComparator  internalKeyComparator
 	internalFilterPolicy internalFilterPolicy
 	options Options
 	ownsInfoLog bool
