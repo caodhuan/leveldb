@@ -25,6 +25,14 @@ const (
 type sequenceNumber uint64
 const kMaxSequenceNumber sequenceNumber = (1 << 56) -1
 
+// kValueTypeForSeek defines the ValueType that should be passed when
+// constructing a ParsedInternalKey object for seeking to a particular
+// sequence number (since we sort sequence numbers in decreasing order
+// and the value type is embedded as the low 8 bits in the sequence
+// number in internal keys, we need to use the highest-numbered
+// ValueType, not the lowest).
+const kValueTypeForSeek = kTypeValue
+
 const kKeyHead = 8
 
 type internalKey struct {
@@ -77,10 +85,7 @@ func appendInternalKey(result *string, key *parsedInternalKey) {
 
 	// looks like go had a encoding/binary packge to process these operations
 
-	buf := make([]byte, kKeyHead)
-	binary.PutUvarint(buf, packSequenceAndType(uint64(key.sequence), key.vt))
-
-	*result += string(buf)
+	encodeFixed64(result, packSequenceAndType(uint64(key.sequence), key.vt))
 }
 
 func packSequenceAndType(seq uint64, t ValueType) uint64 {
@@ -95,9 +100,7 @@ func parseInternalKey(internalKey string, result *parsedInternalKey) bool {
 		return false
 	}
 
-	buf := []byte(internalKey[len(internalKey) - kKeyHead : ])
-
-	val, _ := binary.Uvarint(buf)
+	val := decodeFixed64(internalKey[len(internalKey) - kKeyHead : ]) 
 
 	c := val & 0xFF
 
@@ -107,3 +110,43 @@ func parseInternalKey(internalKey string, result *parsedInternalKey) bool {
 
 	return ValueType(c) <= kTypeValue
 }
+
+func encodeFixed64(result *string, value uint64) {
+	buf := make([]byte, kKeyHead)
+	binary.PutUvarint(buf, value)
+
+	*result += string(buf)
+}
+
+func encodeFixed32(result *string, value uint32) {
+	buf := make([]byte, kKeyHead / 2)
+	
+	binary.PutUvarint(buf, uint64(value) )
+
+	*result += string(buf)
+}
+
+func decodeFixed64(value string) uint64 {
+	if len(value) != kKeyHead {
+		return 0
+	}
+
+	buf := []byte(value)
+
+	result, _ := binary.Uvarint(buf)
+
+	return result
+}
+
+func decodeFix32(value string) uint32 {
+	if len(value) != (kKeyHead / 2) {
+		return 0
+	}
+
+	buf := []byte(value)
+
+	result, _ := binary.Uvarint(buf)
+
+	return uint32(result)
+}
+
