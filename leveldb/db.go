@@ -2,6 +2,8 @@ package leveldb
 
 import "fmt"
 
+const kNumNonTableCacheFiles = 10
+
 type DB interface {
 	Put(writeOptions WriteOptions, key string, value string) Status
 	Delete(writeOptions WriteOptions, key string) Status
@@ -16,14 +18,13 @@ type DB interface {
 }
 
 type dbImpl struct {
-	env *Env
-	internalComparator  internalKeyComparator
-	internalFilterPolicy internalFilterPolicy
+	env Env
+	internalKeyComparator
+	internalFilterPolicy
 	options Options
 	ownsInfoLog bool
 	ownsCache bool
 	dbName string
-
 	tableCache TableCache
 }
 
@@ -33,19 +34,17 @@ type keyRange struct {
 }
 
 func init() {
-	fmt.Printf("Hello world!\n")
 }
 
-func Open(options Options, name string, db *DB) Status {
+func Open(options *Options, name string, db *DB) Status {
 	*db = nil
-	impl := &dbImpl {
-		options: options,
-	}
+	impl := makeDBImpl(options, name)
 	s := OK()
 
 	if s.OK() {
 		*db = impl
 	}
+
 	var defaultE defaultEnv
 	if defaultE == DefaultEnv() {
 		fmt.Printf("Hello world!``1111\n")
@@ -94,4 +93,71 @@ func (this dbImpl) GetApproximateSizes(kr *keyRange, n int32, sizes *uint64) {
 
 func (this dbImpl) CompactRange(begin string, end string) {
 
+}
+
+
+func makeDBImpl(options *Options, name string) dbImpl {
+	return dbImpl{
+		env: options.Env,
+		internalKeyComparator: makeInternalKeyComparator(options.Comparator),
+		internalFilterPolicy: makeInternalFilterPolicy(options.FilterPolicy),
+		dbName:name,
+	}
+}
+
+
+func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internalFilterPolicy, options *Options) Options {
+	result := *options
+	result.Comparator = &icmp
+	if options.FilterPolicy != nil {
+		result.FilterPolicy = &ipolicy
+	} else {
+		result.FilterPolicy = nil
+	}
+
+	ClipToRangeInt32(&result.MaxOpenFiles, 64 + kNumNonTableCacheFiles, 50000)
+	ClipToRangeUint32(&result.WriteBufferSize, 64<<10, 1<<30)
+	ClipToRangeUint32(&result.BlockSize, 1<<10, 4<<20)
+
+	if result.InfoLog != nil {
+		// Open a log file in the same directory as the db
+		// options.CreateDir(dbName)
+		// options.RenameFile()
+	}
+}
+
+func ClipToRangeUint64(value *uint64, minValue uint64, maxValue uint64) {
+	if *value > maxValue {
+		*value = maxValue
+	}
+	if *value < minValue {
+		*value = minValue
+	}
+}
+
+func ClipToRangeInt64(value *int64, minValue int64, maxValue int64) {
+	if *value > maxValue {
+		*value = maxValue
+	}
+	if *value < minValue {
+		*value = minValue
+	}
+}
+
+func ClipToRangeUint32(value *uint32, minValue uint32, maxValue uint32) {
+	if *value > maxValue {
+		*value = maxValue
+	}
+	if *value < minValue {
+		*value = minValue
+	}
+}
+
+func ClipToRangeInt32(value *int32, minValue int32, maxValue int32) {
+	if *value > maxValue {
+		*value = maxValue
+	}
+	if *value < minValue {
+		*value = minValue
+	}
 }

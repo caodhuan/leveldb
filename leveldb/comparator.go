@@ -5,7 +5,7 @@ import (
 	"./utilties"
 )
 
-type Compartor interface {
+type Comparator interface {
 	// Three-way comparison.  Returns value:
   	//   < 0 iff "a" < "b",
   	//   == 0 iff "a" == "b",
@@ -28,10 +28,10 @@ type Compartor interface {
 }
 
 type internalKeyComparator struct {
-	userComparator Compartor
+	userComparator Comparator
 }
 
-func BytewiseComparator() Compartor {
+func BytewiseComparator() Comparator {
 	return &bytewiseComparator{}
 }
 
@@ -132,5 +132,11 @@ func (this *internalKeyComparator) FindShortSuccessor(key *string) {
 		encodeFixed64(&tmp, packSequenceAndType(uint64(kMaxSequenceNumber), kValueTypeForSeek) )
 	
 		*key = tmp
+	}
+}
+
+func makeInternalKeyComparator(c Comparator) internalKeyComparator {
+	return internalKeyComparator {
+		userComparator: c,
 	}
 }

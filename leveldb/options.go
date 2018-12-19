@@ -8,11 +8,11 @@ const (
 )
 
 type Options struct {
-	Compartor 			Compartor
+	Comparator 
 	CreateIfMissing 	bool
 	ErrorIfExists		bool
 	ParanoidChecks		bool
-	Env					Env
+	Env					
 	InfoLog				Logger
 	WriteBufferSize		uint32
 	MaxOpenFiles		int32
@@ -20,7 +20,7 @@ type Options struct {
 	BlockSize			uint32
 	BlockRestartInterval int32
 	Compression			CompressionType
-	FilterPolicy		FilterPolicy
+	FilterPolicy
 }
 
 type ReadOptions struct {
@@ -31,7 +31,7 @@ type WriteOptions struct {
 
 func NewOptions() *Options {
 	return &Options {
-		Compartor: BytewiseComparator(),
+		Comparator: BytewiseComparator(),
 		CreateIfMissing: false,
 		ErrorIfExists: false,
 		ParanoidChecks: false,
