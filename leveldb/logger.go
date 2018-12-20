@@ -17,7 +17,7 @@ func makeLogger(fname string) Logger {
 
 func (this *defaultLogger) Logv(format string, a ...interface{}) {
 
-	str := fmt.Sprintf(format, a)
+	str := fmt.Sprintf(format, a ... )
 	
 	this.Append(str)
 	
