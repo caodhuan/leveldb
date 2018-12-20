@@ -1,6 +1,5 @@
 package leveldb
 
-import "fmt"
 
 const kNumNonTableCacheFiles = 10
 
@@ -45,10 +44,6 @@ func Open(options *Options, name string, db *DB) Status {
 		*db = impl
 	}
 
-	var defaultE defaultEnv
-	if defaultE == DefaultEnv() {
-		fmt.Printf("Hello world!``1111\n")
-	}
 	return s
 }
 
@@ -124,6 +119,8 @@ func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internal
 		// options.CreateDir(dbName)
 		// options.RenameFile()
 	}
+
+	return result
 }
 
 func ClipToRangeUint64(value *uint64, minValue uint64, maxValue uint64) {
