@@ -187,27 +187,59 @@ type defaultFileLock struct {
 }
 
 func (this *defaultFileLock) Lock(fname string) Status {
-	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0755)
-	if err != nil {
-		return IOError(fmt.Sprintf("%v", err) )
-	}
-	
+	// f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0755)
+	// if err != nil {
+	// 	return IOError(fmt.Sprintf("%v", err) )
+	// }
+	// todo:先省略不实现
 	return OK()
 }
 
 func (this *defaultFileLock) Unlock() Status {
+	// todo: 同上
 	return OK()
 }
 
 func (this *defaultEnv) NewSequentialFile(fname string, result *SequentialFile) Status {
+	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0755)
+
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
+	*result = &defaultSequentialFile{
+		File: f,
+	}
+
 	return OK()
 }
 
 func (this *defaultEnv) NewRandomAccessFile(fname string, result *RandomAccessFile) Status {
+	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0755)
+
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
+	*result = &defaultRandomAccessFile{
+		File: f,
+	}
+
 	return OK()
 }
 
 func (this *defaultEnv) NewWritableFile(fname string, result *WritableFile) Status {
+
+	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0755)
+
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
+	*result = &defaultWritableFile{
+		File: f,
+	}
+
 	return OK()
 }
 	  
