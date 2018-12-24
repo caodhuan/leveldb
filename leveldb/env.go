@@ -2,6 +2,9 @@ package leveldb
 
 import (
 	"time"
+	"os"
+	"fmt"
+	//"syscall"
 )
 
 type Env interface {
@@ -65,7 +68,41 @@ func DefaultEnv() Env {
 }
 
 type SequentialFile interface {
+	
+	Read(scratch []byte) Status
 
+	// Skip "n" bytes from the file. This is guaranteed to be no
+	// slower that reading the same data, but may be faster.
+	//
+	// If end of file is reached, skipping will stop at the end of the
+	// file, and Skip will return OK.
+	//
+	// REQUIRES: External synchronization
+	Skip(n int64) Status
+}
+
+type defaultSequentialFile struct {
+	*os.File
+}
+
+func (this *defaultSequentialFile) Read(scratch []byte) Status {
+	
+	_, err := this.File.Read(scratch)
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
+	return OK()
+}
+
+func (this *defaultSequentialFile) Skip(n int64) Status {
+	_, err := this.File.Seek(n, 1)
+
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
+	return OK()
 }
 
 type RandomAccessFile interface {
@@ -76,10 +113,25 @@ type RandomAccessFile interface {
 	// "scratch[0..n-1]", so "scratch[0..n-1]" must be live when
 	// "*result" is used.  If an error was encountered, returns a non-OK
 	// status.
-	//
-	// Safe for concurrent use by multiple threads.
-	Read(offset uint64, n uint64, result *string, scratch string) Status
+	Read(offset int64, scratch []byte) Status
 }
+
+type defaultRandomAccessFile struct {
+	*os.File
+}
+
+func (this *defaultRandomAccessFile) Read(offset int64, scratch []byte) Status {
+	_, err := this.File.ReadAt(scratch, offset)
+
+	if err != nil {
+		if err != nil {
+			return IOError(fmt.Sprintf("%v", err) )
+		}
+	}
+
+	return OK()
+}
+
 
 type WritableFile interface {
 	Append(data string) Status 
@@ -88,8 +140,63 @@ type WritableFile interface {
 	Sync() Status 
 }
 
-type FileLock interface {
+type defaultWritableFile struct {
+	*os.File
+}
 
+func (this *defaultWritableFile) Append(data string) Status {
+	_, err := this.File.Write([]byte(data))
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
+	return OK()
+}
+
+func (this *defaultWritableFile) Close() Status {
+	err := this.File.Close()
+
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
+	return OK()
+}
+
+func (this *defaultWritableFile) Flush() Status {
+	return OK()
+}
+
+func (this *defaultWritableFile) Sync() Status {
+	err := this.File.Sync()
+
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
+	return OK()
+}
+
+type FileLock interface {
+	Lock(fname string) Status
+	Unlock() Status
+}
+
+type defaultFileLock struct {
+	*os.File
+}
+
+func (this *defaultFileLock) Lock(fname string) Status {
+	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+	
+	return OK()
+}
+
+func (this *defaultFileLock) Unlock() Status {
+	return OK()
 }
 
 func (this *defaultEnv) NewSequentialFile(fname string, result *SequentialFile) Status {
