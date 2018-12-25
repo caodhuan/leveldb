@@ -36,7 +36,10 @@ type Env interface {
 	  
 	FileExists(fname string) bool
 
-	GetChildren(dir string, result []string) Status
+	// Store in result the names of the children of the specified directory.
+  	// The names are relative to "dir".
+  	// Original contents of results are dropped.
+	GetChildren(dir string) ([]string, Status)
 
 	DeleteFile(fname string) Status
 
@@ -46,16 +49,43 @@ type Env interface {
 
 	RenameFile(src string, target string) Status
 
+	// Lock the specified file.  Used to prevent concurrent access to
+	// the same db by multiple processes.  On failure, stores NULL in
+	// *lock and returns non-OK.
+	//
+	// On success, stores a pointer to the object that represents the
+	// acquired lock in *lock and returns OK.  The caller should call
+	// UnlockFile(*lock) to release the lock.  If the process exits,
+	// the lock will be automatically released.
+	//
+	// If somebody else already holds the lock, finishes immediately
+	// with a failure.  I.e., this call does not wait for existing locks
+	// to go away.
+	//
+	// May create the named file if it does not already exist.
 	LockFile(fname string, lock *FileLock) Status
 
+	// Release the lock acquired by a previous successful call to LockFile.
+	// REQUIRES: lock was returned by a successful LockFile() call
+	// REQUIRES: lock has not already been unlocked.
 	UnlockFile(lock FileLock) Status
 
+	// Arrange to run "f()" once in a background thread.
+	//
+	// "function" may run in an unspecified thread.  Multiple functions
+	// added to the same Env may run concurrently in different threads.
+	// I.e., the caller may not assume that background work items are
+	// serialized.
 	Schedule(f func())
 
+	// Create and return a log file for storing informational messages.
 	NewLogger(fname string, result *Logger) Status
-
+	  
+	// Returns the number of micro-seconds since some fixed point in time. Only
+  	// useful for computing deltas of time.
 	NowMicros() uint64
-
+	  
+	// Sleep/delay the thread for the prescribed number of micro-seconds.
 	SleepForMicroseconds(micros uint32) 
 }
 
@@ -244,14 +274,35 @@ func (this *defaultEnv) NewWritableFile(fname string, result *WritableFile) Stat
 }
 	  
 func (this *defaultEnv) FileExists(fname string) bool {
+	if _, err := os.Stat(fname); os.IsNotExist(err) {
+		return false
+	}
+	
 	return true
 }
 
-func (this *defaultEnv) GetChildren(dir string, result []string) Status {
-	return OK()
+func (this *defaultEnv) GetChildren(dir string) ([]string, Status) {
+	f, err := os.Open(dir)
+
+	if err != nil {
+		return  nil, IOError(fmt.Sprintf("%v", err) )
+	}
+
+	names, err := f.Readdirnames(-1)
+
+	if err != nil {
+		return  nil, IOError(fmt.Sprintf("%v", err) )
+	}
+
+	return names, OK()
 }
 
 func (this *defaultEnv) DeleteFile(fname string) Status {
+	err := os.Remove(fname)
+	if err != nil {
+		return  IOError(fmt.Sprintf("%v", err) )
+	}
+	
 	return OK()
 }
 
@@ -293,7 +344,3 @@ func (this *defaultEnv) SleepForMicroseconds(micros uint32) {
 	time.Sleep(nanoseconds)
 	
 } 
-
-type defaultWritableFile struct {
-	
-}
