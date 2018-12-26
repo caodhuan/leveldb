@@ -10,11 +10,6 @@ type defaultLogger struct{
 	WritableFile
 }
 
-func makeLogger(fname string) Logger {
-
-	return &defaultLogger {}
-}
-
 func (this *defaultLogger) Logv(format string, a ...interface{}) {
 
 	str := fmt.Sprintf(format, a ... )

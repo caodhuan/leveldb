@@ -45,7 +45,7 @@ type Env interface {
 
 	CreateDir(dirname string) Status
 
-	GetFileSize(fnmae string, fileSize uint64) Status
+	GetFileSize(fname string) (fileSize int64, status Status)
 
 	RenameFile(src string, target string) Status
 
@@ -302,36 +302,61 @@ func (this *defaultEnv) DeleteFile(fname string) Status {
 	if err != nil {
 		return  IOError(fmt.Sprintf("%v", err) )
 	}
-	
+
 	return OK()
 }
 
 func (this *defaultEnv) CreateDir(dirname string) Status {
+	if this.FileExists(dirname) {
+		return OK()
+	}
+	err := os.Mkdir(dirname, os.ModePerm)
+
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
 	return OK()
 }
 
-func (this *defaultEnv) GetFileSize(fnmae string, fileSize uint64) Status {
-	return OK()
+func (this *defaultEnv) GetFileSize(fname string) (fileSize int64, status Status) {
+	f, err := os.Stat(fname)
+	if os.IsNotExist(err) {
+		return 0, IOError(fmt.Sprintf("%v", err) )
+	}
+	return f.Size(), OK()
 }
 
 func (this *defaultEnv) RenameFile(src string, target string) Status {
+	err := os.Rename(src, target)
+	if err != nil {
+		return IOError(fmt.Sprintf("%v", err) )
+	}
+
 	return OK()
 }
 
 func (this *defaultEnv) LockFile(fname string, lock *FileLock) Status {
-	return OK()
+	l := &defaultFileLock{}
+	*lock = l
+
+	return (*lock).Lock(fname)
 }
 
 func (this *defaultEnv) UnlockFile(lock FileLock) Status {
-	return OK()
+	return lock.Unlock()
 }
 
 func (this *defaultEnv) Schedule(f func()) {
-
+	go f()
 }
 
 func (this *defaultEnv) NewLogger(fname string, result *Logger) Status {
-	return OK()
+	dl := new(defaultLogger)
+	
+	*result = dl
+
+	return this.NewWritableFile(fname, &(dl.WritableFile))
 }
 
 func (this *defaultEnv) NowMicros() uint64 {
