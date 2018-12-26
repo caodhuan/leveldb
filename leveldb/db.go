@@ -1,5 +1,9 @@
 package leveldb
 
+import (
+	"sync"
+	"sync/atomic"
+)
 
 const kNumNonTableCacheFiles = 10
 
@@ -24,7 +28,17 @@ type dbImpl struct {
 	ownsInfoLog bool
 	ownsCache bool
 	dbName string
+
+	// table_cache_ provides its own synchronization
 	tableCache TableCache
+	
+	// Lock over the persistent DB state.  Non-NULL iff successfully acquired.
+	dbLock FileLock
+
+	mutex sync.Mutex
+	shuttingDown atomic.Value
+	bgCV sync.Cond
+	
 }
 
 type keyRange struct {
