@@ -114,9 +114,9 @@ func (this *internalKeyComparator) FindShortestSeparator(start *string, limit st
 	if (len(tmp) < len(userStart) ) && (this.userComparator.Compare(userStart, tmp) < 0) {
 		// User key has become shorter physically, but larger logically.
 		// Tack on the earliest possible number to the shortened user key.
-		encodeFixed64(&tmp, packSequenceAndType(uint64(kMaxSequenceNumber), kValueTypeForSeek) )
+		b := encodeFixed64(packSequenceAndType(uint64(kMaxSequenceNumber), kValueTypeForSeek) )
 	
-		*start = tmp
+		*start = tmp + string(b)
 	}
 }
 
@@ -129,9 +129,9 @@ func (this *internalKeyComparator) FindShortSuccessor(key *string) {
 	if (len(tmp) < len(userKey)) && (this.userComparator.Compare(userKey, tmp) < 0) {
 		// User key has become shorter physically, but larger logically.
 		// Tack on the earliest possible number to the shortened user key.
-		encodeFixed64(&tmp, packSequenceAndType(uint64(kMaxSequenceNumber), kValueTypeForSeek) )
+		b := encodeFixed64(packSequenceAndType(uint64(kMaxSequenceNumber), kValueTypeForSeek) )
 	
-		*key = tmp
+		*key = tmp + string(b)
 	}
 }
 

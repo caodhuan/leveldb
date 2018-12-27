@@ -84,8 +84,9 @@ func appendInternalKey(result *string, key *parsedInternalKey) {
 	*result += key.userKey
 
 	// looks like go had a encoding/binary packge to process these operations
+	b := encodeFixed64(packSequenceAndType(uint64(key.sequence), key.vt))
 
-	encodeFixed64(result, packSequenceAndType(uint64(key.sequence), key.vt))
+	*result += string(b)
 }
 
 func packSequenceAndType(seq uint64, t ValueType) uint64 {
@@ -111,19 +112,35 @@ func parseInternalKey(internalKey string, result *parsedInternalKey) bool {
 	return ValueType(c) <= kTypeValue
 }
 
-func encodeFixed64(result *string, value uint64) {
+func encodeFixed64(value uint64) []byte {
 	buf := make([]byte, kKeyHead)
 	binary.PutUvarint(buf, value)
 
-	*result += string(buf)
+	return buf
 }
 
-func encodeFixed32(result *string, value uint32) {
+func encodeFixed32(value uint32) []byte {
 	buf := make([]byte, kKeyHead / 2)
 	
 	binary.PutUvarint(buf, uint64(value) )
 
-	*result += string(buf)
+	return buf
+}
+
+func encodeVarint64(value uint64) []byte {
+	buf := make([]byte, kKeyHead)
+	
+	l := binary.PutUvarint(buf, value)
+	
+	return buf[:l]
+}
+
+func encodeVarint32(value uint32) []byte {
+	buf := make([]byte, kKeyHead)
+	
+	l := binary.PutUvarint(buf, uint64(value) )
+	
+	return buf[:l]
 }
 
 func decodeFixed64(value string) uint64 {
@@ -150,3 +167,30 @@ func decodeFix32(value string) uint32 {
 	return uint32(result)
 }
 
+// Standard Get... routines parse a value from the beginning of a Slice
+// and advance the slice past the parsed value.
+func getVarint64(value string) (string, uint64) {
+	if len(value) != kKeyHead {
+		return value, 0
+	}
+
+	buf := []byte(value)
+
+	result, l := binary.Uvarint(buf)
+
+	return value[l:], result
+}
+
+// Standard Get... routines parse a value from the beginning of a Slice
+// and advance the slice past the parsed value.
+func getVarint32(value string) (string, uint32) {
+	if len(value) != (kKeyHead / 2) {
+		return value, 0
+	}
+
+	buf := []byte(value)
+
+	result, l := binary.Uvarint(buf)
+
+	return value[l:], uint32(result)
+}
