@@ -135,8 +135,8 @@ func (this *internalKeyComparator) FindShortSuccessor(key *string) {
 	}
 }
 
-func makeInternalKeyComparator(c Comparator) internalKeyComparator {
-	return internalKeyComparator {
+func makeInternalKeyComparator(c Comparator) *internalKeyComparator {
+	return &internalKeyComparator {
 		userComparator: c,
 	}
 }

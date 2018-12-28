@@ -29,8 +29,8 @@ func (this *internalFilterPolicy) KeyMayMatch(key string, filter string) bool {
 	return this.userPolicy.KeyMayMatch(key, filter)
 }
 
-func makeInternalFilterPolicy(p FilterPolicy) internalFilterPolicy {
-	return internalFilterPolicy {
+func makeInternalFilterPolicy(p FilterPolicy) *internalFilterPolicy {
+	return &internalFilterPolicy {
 		userPolicy: p,
 	}
 }

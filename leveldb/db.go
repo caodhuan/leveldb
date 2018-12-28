@@ -22,23 +22,54 @@ type DB interface {
 
 type dbImpl struct {
 	env Env
-	internalKeyComparator
-	internalFilterPolicy
-	options Options
+	*internalKeyComparator
+	*internalFilterPolicy
+	options *Options
 	ownsInfoLog bool
 	ownsCache bool
 	dbName string
 
 	// table_cache_ provides its own synchronization
-	tableCache TableCache
+	tableCache *TableCache
 	
 	// Lock over the persistent DB state.  Non-NULL iff successfully acquired.
-	dbLock FileLock
+	dbLock *FileLock
 
-	mutex sync.Mutex
-	shuttingDown atomic.Value
-	bgCV sync.Cond
-	
+	// State below is protected by mutex_
+	mutex *sync.Mutex
+	shuttingDown *atomic.Value
+	bgCV *sync.Cond  	// Signalled when background work finishes
+	mem *MemTable	
+	imm *MemTable 		// Memtable being compacted
+	hasImm *atomic.Value	// So bg thread can detect non-NULL imm_
+	logFile *WritableFile
+	logFileNumber uint64
+	log *LogWriter
+	seed uint32 // for sampling
+
+	// Queue of writers.
+	writers []*Writer
+	tmpBatch *WriteBatch
+
+	snapshots *SnapshotList
+
+	pendingOutputs map[uint64]bool
+
+	bgCompactionScheduled bool
+
+	versions *VersionSet
+
+	bgError *Status
+
+	status [kNumLevels]*CompactionStatus
+}
+
+type Writer struct {	
+
+}
+
+type CompactionStatus struct {
+
 }
 
 type keyRange struct {
@@ -52,9 +83,13 @@ func init() {
 func Open(options *Options, name string, db *DB) Status {
 	*db = nil
 	impl := makeDBImpl(options, name)
-	s := OK()
+
+	impl.mutex.Lock()
+
+	edit, s := impl.recover()
 
 	if s.OK() {
+
 		*db = impl
 	}
 
@@ -135,6 +170,10 @@ func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internal
 	}
 
 	return result
+}
+
+func (this *dbImpl) recover() (*VersionEdit, Status) {
+	return nil, OK()
 }
 
 func ClipToRangeUint64(value *uint64, minValue uint64, maxValue uint64) {
