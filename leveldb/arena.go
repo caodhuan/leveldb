@@ -25,6 +25,8 @@ func (this *Arena) Allocate(size int) []byte {
 	if (size < len(this.allocBlock) ) {
 		result := this.allocBlock[:size]
 		this.allocBlock = this.allocBlock[size:]
+
+		return result
 	}
 	
 	return this.allocateFallback(size)

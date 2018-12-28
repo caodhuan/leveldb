@@ -86,7 +86,7 @@ func Open(options *Options, name string, db *DB) Status {
 
 	impl.mutex.Lock()
 
-	edit, s := impl.recover()
+	_, s := impl.recover()
 
 	if s.OK() {
 
