@@ -69,8 +69,17 @@ type Writer struct {
 }
 
 type CompactionStatus struct {
-
+	micros int64
+	bytesRead int64
+	bytesWritten int64
 }
+
+func (this *CompactionStatus) Add(other *CompactionStatus) {
+	this.micros += other.micros
+	this.bytesRead += other.bytesRead
+	this.bytesWritten += other.bytesWritten
+}
+
 
 type keyRange struct {
 	start string

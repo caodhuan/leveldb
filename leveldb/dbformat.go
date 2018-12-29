@@ -49,12 +49,51 @@ func makeInternalKey(userKey string, number sequenceNumber, t ValueType) interna
 	return *iKey
 }
 
-func clear(internalKey internalKey) {
-	internalKey.rep = ""
+func (this *internalKey) clear() {
+	this.rep = ""
 }
 
-func userKey(internalKey internalKey) string {
-	return extractUserKey(internalKey.rep)
+func (this *internalKey) userKey() string {
+	return extractUserKey(this.rep)
+}
+
+func (this *internalKey) decodeFrom(s string) {
+	this.rep = s
+}
+
+func (this *internalKey) encode() string {
+	return this.rep
+}
+
+func (this *internalKey) setFrom(p *parsedInternalKey) {
+	this.rep = ""
+
+	appendInternalKey(&this.rep, p)
+}
+
+type LookupKey struct {
+	// We construct a char array of the form:
+	//    klength  varint32               <-- start_
+	//    userkey  char[klength]          <-- kstart_
+	//    tag      uint64
+	//                                    <-- end_
+	// The array is a suitable MemTable key.
+	// The suffix starting with "userkey" can be used as an InternalKey.
+	start int
+	kStart int
+	end int
+	space [200]byte
+}
+
+func newLookupKey(userKey string, sequence sequenceNumber) {
+	b := encodeVarint32(uint32(len(userKey) + kKeyHead) )
+	userKey += string(b)
+
+	b = encodeFixed64(packSequenceAndType(uint64(sequence), kValueTypeForSeek) )
+}
+
+func (this *LookupKey) memtableKey() string {
+
 }
 
 type parsedInternalKey struct {
