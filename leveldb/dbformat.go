@@ -73,27 +73,44 @@ func (this *internalKey) setFrom(p *parsedInternalKey) {
 
 type LookupKey struct {
 	// We construct a char array of the form:
-	//    klength  varint32               <-- start_
+	//    klength  varint32               <-- 0
 	//    userkey  char[klength]          <-- kstart_
 	//    tag      uint64
-	//                                    <-- end_
 	// The array is a suitable MemTable key.
 	// The suffix starting with "userkey" can be used as an InternalKey.
-	start int
 	kStart int
-	end int
-	space [200]byte
+	space []byte
 }
 
-func newLookupKey(userKey string, sequence sequenceNumber) {
+func newLookupKey(userKey string, sequence sequenceNumber) *LookupKey {
+	var lookupKey LookupKey
 	b := encodeVarint32(uint32(len(userKey) + kKeyHead) )
-	userKey += string(b)
+	lookupKey.kStart = len(lookupKey.space)
+	userKeyByte := []byte(userKey)
+	lookupKey.space = make([]byte, len(b)+ len(userKeyByte) + kKeyHead )
+	lookupKey.kStart = copy(lookupKey.space, b)
+
+	copy(lookupKey.space[lookupKey.kStart:], userKeyByte)
 
 	b = encodeFixed64(packSequenceAndType(uint64(sequence), kValueTypeForSeek) )
+	copy(lookupKey.space[ len(b) + len(userKeyByte):], b)
+
+	return &lookupKey
 }
 
+// Return a key suitable for lookup in a MemTable.
 func (this *LookupKey) memtableKey() string {
+	return string(this.space)
+}
 
+// Return an internal key (suitable for passing to an internal iterator)
+func (this *LookupKey) internalKey() string {
+	return string(this.space[ this.kStart : ] )
+}
+
+// Return the user key
+func (this *LookupKey) userKey() string {
+	return string(this.space[ this.kStart : len(this.space) - 8] )
 }
 
 type parsedInternalKey struct {

@@ -28,7 +28,7 @@ type Comparator interface {
 }
 
 type internalKeyComparator struct {
-	userComparator Comparator
+	Comparator
 }
 
 func BytewiseComparator() Comparator {
@@ -79,11 +79,11 @@ func (this *bytewiseComparator) FindShortSuccessor(key *string) {
 }
 
 func (this *internalKeyComparator) Name() string {
-	return this.userComparator.Name()
+	return "leveldb.InternalKeyComparator"
 }
 
 func (this *internalKeyComparator) Compare(aKey string, bKey string) int {
-	result := this.userComparator.Compare(extractUserKey(aKey), extractUserKey(bKey) )
+	result := this.Comparator.Compare(extractUserKey(aKey), extractUserKey(bKey) )
 
 	// Order by:
   	//    increasing user key (according to user-supplied comparator)
@@ -109,9 +109,9 @@ func (this *internalKeyComparator) FindShortestSeparator(start *string, limit st
 
 	tmp := userStart
 
-	this.userComparator.FindShortestSeparator(&tmp, userLimit)
+	this.Comparator.FindShortestSeparator(&tmp, userLimit)
 
-	if (len(tmp) < len(userStart) ) && (this.userComparator.Compare(userStart, tmp) < 0) {
+	if (len(tmp) < len(userStart) ) && (this.Comparator.Compare(userStart, tmp) < 0) {
 		// User key has become shorter physically, but larger logically.
 		// Tack on the earliest possible number to the shortened user key.
 		b := encodeFixed64(packSequenceAndType(uint64(kMaxSequenceNumber), kValueTypeForSeek) )
@@ -124,9 +124,9 @@ func (this *internalKeyComparator) FindShortSuccessor(key *string) {
 	userKey := extractUserKey(*key)
 	tmp := userKey
 
-	this.userComparator.FindShortSuccessor(&tmp)
+	this.Comparator.FindShortSuccessor(&tmp)
 
-	if (len(tmp) < len(userKey)) && (this.userComparator.Compare(userKey, tmp) < 0) {
+	if (len(tmp) < len(userKey)) && (this.Comparator.Compare(userKey, tmp) < 0) {
 		// User key has become shorter physically, but larger logically.
 		// Tack on the earliest possible number to the shortened user key.
 		b := encodeFixed64(packSequenceAndType(uint64(kMaxSequenceNumber), kValueTypeForSeek) )
@@ -135,8 +135,12 @@ func (this *internalKeyComparator) FindShortSuccessor(key *string) {
 	}
 }
 
+func (this *internalKeyComparator) userComparator() Comparator {
+	return this.Comparator
+}
+
 func makeInternalKeyComparator(c Comparator) *internalKeyComparator {
 	return &internalKeyComparator {
-		userComparator: c,
+		Comparator: c,
 	}
 }

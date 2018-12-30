@@ -1,5 +1,9 @@
 package leveldb
 
+import (
+	"sort"
+)
+
 type Version struct {
 	vSet *VersionSet // VersionSet to which this Version belongs
 	next *Version	// Next version in linked list
@@ -45,10 +49,56 @@ type VersionSet struct {
 // yield the contents of this Version when merged together.
 // REQUIRES: This version has been saved (see VersionSet::SaveTo)
 func (this *Version) AddIterators(readOptions *ReadOptions, iters []*Iterator) {
+	// for key, value := range this.files[0] {
 
+	// }
 }
 
-func (this *Version) Get(readOptions *ReadOptions, 
-	key LookupKey, val *string) (seekFile *FileMetaData, seekFileLevel int) {
+func (this *Version) Get(readOptions *ReadOptions, key LookupKey, val *string) (seekFile *FileMetaData, seekFileLevel int) {
+	iKey := key.internalKey()
+	userKey := key.userKey()
 
+	ucmp := this.vSet.icmp.userComparator()
+
+	seekFile = nil
+	seekFileLevel = -1
+
+	var lastFileRead *FileMetaData
+	var lastFileReadLevel = -1
+
+	var tmp []*FileMetaData
+	var tmp2 *FileMetaData
+	  
+	// We can search level-by-level since entries never hop across
+  	// levels.  Therefore we are guaranteed that if we find data
+  	// in an smaller level, later levels are irrelevant.
+	for level := 0; level < kNumLevels; level++ {
+		numFiles := len(this.files[level])
+		if numFiles == 0 {
+			continue
+		}
+
+		// Get the list of files to search in this level
+		files := this.files[level]
+		if level == 0 {
+			tmp = make([]*FileMetaData, numFiles)[:0]
+
+			for i := 0; i < numFiles; i++ {
+				f := files[i]
+				if (ucmp.Compare(userKey, f.smallest.userKey() ) >= 0 &&
+					ucmp.Compare(userKey, f.largest.userKey() ) <= 0) {
+					
+					tmp = append(tmp, f)
+				}
+			}
+
+			if len(tmp) == 0 {
+				continue
+			}
+
+		}
+
+	}
+	
+	return seekFile, seekFileLevel
 }
