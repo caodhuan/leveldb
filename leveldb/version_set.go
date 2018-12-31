@@ -4,6 +4,20 @@ import (
 	"sort"
 )
 
+const (
+	saver_state_not_found = iota
+	saver_state_found
+	saver_state_deleted
+	saver_state_corrupt
+)
+type saver struct {
+	state int
+	ucmp Comparator
+	userKey string
+	value *string
+}
+
+
 type Version struct {
 	vSet *VersionSet // VersionSet to which this Version belongs
 	next *Version	// Next version in linked list
@@ -23,7 +37,7 @@ type Version struct {
 }
 
 type VersionSet struct {
-	env *Env
+	Env
 	dbName string
 	options *Options
 	tableCache *TableCache
@@ -54,7 +68,7 @@ func (this *Version) AddIterators(readOptions *ReadOptions, iters []*Iterator) {
 	// }
 }
 
-func (this *Version) Get(readOptions *ReadOptions, key LookupKey, val *string) (seekFile *FileMetaData, seekFileLevel int) {
+func (this *Version) Get(readOptions *ReadOptions, key LookupKey, value *string) (seekFile *FileMetaData, seekFileLevel int, status Status) {
 	iKey := key.internalKey()
 	userKey := key.userKey()
 
@@ -96,9 +110,71 @@ func (this *Version) Get(readOptions *ReadOptions, key LookupKey, val *string) (
 				continue
 			}
 
+			sort.Sort(&FileMetaDataSort{
+				fileMetaData: tmp,
+				less: func(a, b *FileMetaData) bool {
+					return a.number > b.number
+				},
+			})
+
+			files = tmp
+			numFiles = len(tmp)
+		} else {
+			index := FindFile(this.vSet.icmp, this.files[level], iKey)
+			if index >= numFiles {
+				files = nil
+				numFiles = 0
+			} else {
+				tmp2 = files[index]
+				if (ucmp.Compare(userKey, tmp2.smallest.userKey()) < 0 ) {
+					files = nil
+					numFiles = 0
+				} else {
+					files = files[index: ]
+					numFiles = 1
+				}
+			}
 		}
 
+		for i := 0; i < numFiles; i++ {
+			if lastFileRead != nil && seekFile == nil {
+				seekFile = lastFileRead
+				seekFileLevel = lastFileReadLevel
+			}
+
+			f := files[i]
+
+			lastFileRead = f
+			lastFileReadLevel = level
+
+			var s saver
+			s.state = saver_state_not_found
+			s.ucmp = ucmp
+			s.userKey = userKey
+			s.value = value
+
+			//state = this.vSet.tableCache.Get(readOptions, f.number, f.fileSize, iKey, &f, )
+
+		}
 	}
 	
-	return seekFile, seekFileLevel
+	return seekFile, seekFileLevel, status
+}
+
+func FindFile(icmp *internalKeyComparator, files []*FileMetaData, key string) int {
+	left := 0
+	right := len(files)
+
+	for (left < right) {
+		mid := (left + right) / 2
+		f := files[mid]
+
+		if (icmp.Compare(f.largest.encode(), key) < 0) {
+			left = mid + 1
+		} else {
+			right = mid
+		}
+	}
+
+	return right
 }

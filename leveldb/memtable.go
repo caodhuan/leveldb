@@ -7,10 +7,8 @@ type keyComparator struct{
 	internalKeyComparator
 }
 
-
-type Table structure.SkipList
 type MemTable struct {
-	table Table
+	table structure.SkipList
 	arena Arena
 }
 
