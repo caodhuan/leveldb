@@ -11,7 +11,7 @@ const kNumShardBits = 4
 const kNumShards = 1 << kNumShardBits
 
 type Cache interface {
-
+	Value(handle *interface{}) *interface{}
 }
 
 
@@ -66,13 +66,22 @@ type ShardedLRUCache struct {
 	lastID	uint64
 }
 
+func (this *ShardedLRUCache) Value(handle *interface{}) *interface{} {
+	lruHandle, ok := (*handle).(LRUHandle)
+	if !ok {
+		return lruHandle.value
+	}
+
+	return nil
+}
+
 func NewLRUCache(capacity int) Cache {
 	var result ShardedLRUCache
 
 	perShared := (capacity + (kNumShards - 1) ) / kNumShards
 
 	for i := 0; i < kNumShards; i++ {
-		result.shared[i].SetCapacity(perShared)
+		result.shared[i].SetCapacity(uint(perShared) )
 	}
 
 	return result
