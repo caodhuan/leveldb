@@ -92,7 +92,7 @@ func (this *EmptyIterator) Status() Status {
 
 type TwoLevelIterator struct {
 	blockFunction func(arg interface{}, options *ReadOptions, indexValue string) Iterator
-	arg *interface{}
+	arg interface{}
 	options *ReadOptions
 	s Status
 	
@@ -136,7 +136,7 @@ func (this *TwoLevelIterator) Status() Status {
 }
 
 
-func NewTwoLevelIterator(indexIter Iterator, blockFunction func(arg interface{}, options *ReadOptions, indexValue string) Iterator, arg *interface{}, options *ReadOptions ) Iterator {
+func NewTwoLevelIterator(indexIter Iterator, blockFunction func(arg interface{}, options *ReadOptions, indexValue string) Iterator, arg interface{}, options *ReadOptions ) Iterator {
 	return &TwoLevelIterator{
 		blockFunction: blockFunction,
 		arg: arg,

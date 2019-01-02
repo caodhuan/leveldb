@@ -84,6 +84,6 @@ func NewLRUCache(capacity int) Cache {
 		result.shared[i].SetCapacity(uint(perShared) )
 	}
 
-	return result
+	return &result
 }
 

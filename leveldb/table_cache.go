@@ -16,7 +16,7 @@ func newTableCache(dbName string, options *Options, entries int) *TableCache {
 	}
 }
 
-func (this *TableCache) NewIterator(options ReadOptions, fileNumber uint64, fileSize uint64, tablePtr **Table) Iterator {
+func (this *TableCache) NewIterator(options *ReadOptions, fileNumber uint64, fileSize uint64, tablePtr **Table) Iterator {
 	if  tablePtr != nil {
 		*tablePtr = nil
 	}
@@ -28,9 +28,14 @@ func (this *TableCache) NewIterator(options ReadOptions, fileNumber uint64, file
 		return NewErrorIterator(s)
 	}
 
-	tableAndFile, ok := (*this.Cache.Value(&handle)).(TableAndFile)
+	tableAndFile, _ := (*this.Cache.Value(&handle)).(TableAndFile)
 	table := tableAndFile.table
-	result := table.NewIterator()
+	result := table.NewIterator(options)
+	if tablePtr != nil {
+		*tablePtr = table
+	}
+
+	return result
 }
 
 func (this *TableCache) FindTable(fileNumber, fileSize uint64, handle *interface{}) Status {
