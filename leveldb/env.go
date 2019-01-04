@@ -231,7 +231,7 @@ func (this *defaultFileLock) Unlock() Status {
 }
 
 func (this *defaultEnv) NewSequentialFile(fname string, result *SequentialFile) Status {
-	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(fname, os.O_RDONLY, 0755)
 
 	if err != nil {
 		return IOError(fmt.Sprintf("%v", err) )
@@ -245,7 +245,7 @@ func (this *defaultEnv) NewSequentialFile(fname string, result *SequentialFile) 
 }
 
 func (this *defaultEnv) NewRandomAccessFile(fname string, result *RandomAccessFile) Status {
-	f, err := os.OpenFile(fname, os.O_RDWR|os.O_CREATE, 0755)
+	f, err := os.OpenFile(fname, os.O_RDONLY, 0755)
 
 	if err != nil {
 		return IOError(fmt.Sprintf("%v", err) )

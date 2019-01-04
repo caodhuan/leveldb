@@ -26,10 +26,10 @@ func BlockReader(arg interface{}, options *ReadOptions, indexValue string) Itera
 	// We intentionally allow extra stuff in index_value so that we
 	// can add more features in the future.
 	if s.OK() {
-		var contents BlockContents
-		if blockCache != nil {
-			var cacheKeyBuffer [16]byte
-		}
+		// var contents BlockContents
+		// if blockCache != nil {
+		// 	var cacheKeyBuffer [16]byte
+		// }
 	}
 	// todo
 
