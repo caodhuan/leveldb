@@ -14,23 +14,23 @@ type Table struct {
 }
 
 func BlockReader(arg interface{}, options *ReadOptions, indexValue string) Iterator {
-	table, _ := arg.(*Table)
-	blockCache := table.options.BlockCache
-	var (block Block
-		 Handle interface{}
-		 handle BlockHandle
-		)
-	input := indexValue
+	// table, _ := arg.(*Table)
+	// blockCache := table.options.BlockCache
+	// var (block Block
+	// 	 Handle interface{}
+	// 	 handle BlockHandle
+	// 	)
+	// input := indexValue
 
-	s := handle.DecodeFrom([]byte(input) )
+	//s := handle.DecodeFrom([]byte(input) )
 	// We intentionally allow extra stuff in index_value so that we
 	// can add more features in the future.
-	if s.OK() {
+	//if s.OK() {
 		// var contents BlockContents
 		// if blockCache != nil {
 		// 	var cacheKeyBuffer [16]byte
 		// }
-	}
+	//}
 	// todo
 
 	return NewEmptyIterator()

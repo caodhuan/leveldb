@@ -18,7 +18,7 @@ type Options struct {
 	MaxOpenFiles		int32
 	BlockCache			Cache
 	BlockSize			uint32
-	BlockRestartInterval int32
+	BlockRestartInterval int
 	Compression			CompressionType
 	FilterPolicy
 }
