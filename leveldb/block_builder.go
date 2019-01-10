@@ -21,8 +21,6 @@ func newBlockBuilder(options *Options) *BlockBuilder {
 		options: options,
 		counter: 0,
 		finished: false,
-		restarts: make([]int, 1)[:0],
-		buffer: make([]byte, 1)[:0],
 		lastKey: "",
 	}
 }
@@ -75,6 +73,8 @@ func (this *BlockBuilder) Add(key string, value string) {
 	if (this.lastKey != key) {
 		panic( fmt.Sprintf("inequal key: %s %s\n", this.lastKey, key ) )
 	}
+	
+	this.counter++
 }
 
 // Finish building the block and return a []byte that refers to the
