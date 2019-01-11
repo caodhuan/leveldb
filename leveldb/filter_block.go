@@ -14,8 +14,8 @@ type FilterBlockReader struct {
 
 type FilterBlockBuilder struct {
 	policy FilterPolicy
-	keys string 	// Flattened key contents
-	start []uint 	// Starting index in keys of each key
+	keys []byte 	// Flattened key contents
+	start []int 	// Starting index in keys of each key
 	result string	// Filter data computed so far
 	tmpKeys []string	// policy->CreateFilter() argument
 	filterOffsets []int
@@ -35,6 +35,10 @@ func (this *FilterBlockBuilder) StartBlock(blockOffset uint64) {
 	}
 }
 
+func (this *FilterBlockBuilder) AddKey(key []byte) {
+	this.start = append(this.start, len(this.keys))
+	this.keys = append(this.keys, key ...)
+}
 
 func (this *FilterBlockBuilder) generateFilter() {
 	numKeys := len(this.start)

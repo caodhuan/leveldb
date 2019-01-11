@@ -60,3 +60,72 @@ func newTableBuilder(options *Options, file *WritableFile) *TableBuilder {
 	return &result
 }
 
+// Change the options used by this builder. Note: only some of the
+// option fields can be changed after construction. If a field is
+// not allowed to be change dynamically and its value in the structure
+// passed to the constructor is different from its value in the structure
+// passed to this method, this method will return an error without
+// changing any fields
+func (this *TableBuilder) ChangeOptions(options *Options) Status {
+
+	// Note: if more fields are added to Options, update this function to
+	// catch changes that should not be allowed to change in the middle of
+	// building a Table.
+	if options.Comparator != this.options.Comparator {
+		return InvalidArgument("changing comparator while building table")
+	} 
+
+	this.options = &(*options)
+	this.indexBlockOptions = &(*options)
+	this.indexBlockOptions.BlockRestartInterval = 1
+
+	return OK()
+}
+
+// Add key, value to the table being constructed.Add
+// REQUIRES: key is after any previously added key according to comparator.
+// REQUIRES: Finish(), Abandon() has not been called
+func (this *TableBuilder) Add(key string, value string) {
+	if (!this.ok()) {
+		return
+	}
+	keyByte := []byte(key)
+
+	if (this.numEntries > 0) {
+
+	}
+
+	if (this.pendingIndexEntry) {
+		this.options.Comparator.FindShortestSeparator(&this.lastKey, key)
+		var handleEncoding []byte
+		this.pendingHandle.EncodeTo(&handleEncoding)
+		this.indexBlock.Add(keyByte, handleEncoding)
+		this.pendingIndexEntry = false
+	}
+
+	if (this.filterBlock != nil) {
+		this.filterBlock.AddKey(keyByte)
+	}
+
+	this.lastKey = key
+	this.numEntries++
+	this.dataBlock.Add(keyByte, []byte(value) )
+	
+	estimatedBlockSize := this.dataBlock.CurrentSizeEstimate()
+
+	if (estimatedBlockSize >= this.options.BlockSize) {
+		this.Flush()
+	}
+}
+
+// Advanced operation: flush any buffered key/value pairs to file.
+// Can be used to ensure that two adjacent entries never live in
+// the same data block.  Most clients should not need to use this method.
+// REQUIRES: Finish(), Abandon() have not been called
+func (this *TableBuilder) Flush() {
+
+}
+
+func (this *TableBuilder) ok() bool {
+	return this.s.OK()
+}

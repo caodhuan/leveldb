@@ -170,7 +170,7 @@ func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internal
 
 	ClipToRangeInt32(&result.MaxOpenFiles, 64 + kNumNonTableCacheFiles, 50000)
 	ClipToRangeUint32(&result.WriteBufferSize, 64<<10, 1<<30)
-	ClipToRangeUint32(&result.BlockSize, 1<<10, 4<<20)
+	ClipToRangeUint(&result.BlockSize, 1<<10, 4<<20)
 
 	if result.InfoLog != nil {
 		// Open a log file in the same directory as the db
@@ -213,6 +213,15 @@ func ClipToRangeUint32(value *uint32, minValue uint32, maxValue uint32) {
 }
 
 func ClipToRangeInt32(value *int32, minValue int32, maxValue int32) {
+	if *value > maxValue {
+		*value = maxValue
+	}
+	if *value < minValue {
+		*value = minValue
+	}
+}
+
+func ClipToRangeUint(value *uint, minValue uint, maxValue uint) {
 	if *value > maxValue {
 		*value = maxValue
 	}

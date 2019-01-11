@@ -13,7 +13,7 @@ type BlockBuilder struct {
 	restarts []int // Restart points
 	counter int	// Number of entries emitted since restart
 	finished bool // has Finish() been called?
-	lastKey string
+	lastKey []byte
 }
 
 func newBlockBuilder(options *Options) *BlockBuilder {
@@ -21,7 +21,6 @@ func newBlockBuilder(options *Options) *BlockBuilder {
 		options: options,
 		counter: 0,
 		finished: false,
-		lastKey: "",
 	}
 }
 
@@ -31,12 +30,12 @@ func (this *BlockBuilder) Reset() {
 	this.restarts = this.restarts[ :0]
 	this.counter = 0
 	this.finished = false
-	this.lastKey = ""
+	this.lastKey = this.lastKey[ :0]
 }
 
 // REQUIRES: Finish() has not been called since tha last call to Reset().
 // REQUIRES: key is larger than any previously added key
-func (this *BlockBuilder) Add(key string, value string) {
+func (this *BlockBuilder) Add(key []byte, value []byte) {
 	lastKeyPiece := this.lastKey
 	shared := 0
 	if this.counter < this.options.BlockRestartInterval {
@@ -64,14 +63,20 @@ func (this *BlockBuilder) Add(key string, value string) {
 	
 	// Add string delta to buffer followed by value
 	this.buffer = append(this.buffer, []byte(key[shared:nonShared]) ...) 
-	this.buffer = append(this.buffer, []byte(value) ...)
+	this.buffer = append(this.buffer, value ...)
 	
 	// update status
 	this.lastKey = this.lastKey[:shared]
-	this.lastKey += key[shared: nonShared]
-
-	if (this.lastKey != key) {
+	this.lastKey = append(this.lastKey, key[shared: nonShared] ...)
+	
+	if (len(this.lastKey) != len(key) ) {
 		panic( fmt.Sprintf("inequal key: %s %s\n", this.lastKey, key ) )
+	} else {
+		for index,_ := range(this.lastKey) {
+			if this.lastKey[index] != key[index] {
+				panic( fmt.Sprintf("inequal key: %s %s\n", this.lastKey, key ) )
+			}
+		}
 	}
 	
 	this.counter++

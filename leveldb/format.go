@@ -15,9 +15,14 @@ type BlockHandle struct {
 	size uint64
 }
 
-func (this *BlockHandle) EncodeTo(dst []byte) {
-	binary.PutUvarint(dst, this.offset)
-	binary.PutUvarint(dst, this.size)
+func (this *BlockHandle) EncodeTo(dst *[]byte) {
+	tmp := make([]byte, 8)
+
+	l := binary.PutUvarint(tmp, this.offset)
+	*dst = append(*dst, tmp[:l] ...)
+
+	l = binary.PutUvarint(tmp[0:], this.size)
+	*dst = append(*dst, tmp[:l] ...)
 	
 }
 
