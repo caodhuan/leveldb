@@ -164,7 +164,7 @@ func (this *defaultRandomAccessFile) Read(offset int64, scratch []byte) Status {
 
 
 type WritableFile interface {
-	Append(data string) Status 
+	Append(data []byte) Status 
 	Close() Status 
 	Flush() Status 
 	Sync() Status 
@@ -174,8 +174,8 @@ type defaultWritableFile struct {
 	*os.File
 }
 
-func (this *defaultWritableFile) Append(data string) Status {
-	_, err := this.File.Write([]byte(data))
+func (this *defaultWritableFile) Append(data []byte) Status {
+	_, err := this.File.Write(data)
 	if err != nil {
 		return IOError(fmt.Sprintf("%v", err) )
 	}

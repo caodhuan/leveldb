@@ -1,9 +1,11 @@
 package leveldb
 
+import "./utilties"
+
 type TableBuilder struct {
 	options *Options
 	indexBlockOptions *Options
-	file *WritableFile
+	file WritableFile
 	offset uint64
 	s Status
 	dataBlock *BlockBuilder
@@ -24,12 +26,14 @@ type TableBuilder struct {
 	// Invariant: r->pending_index_entry is true only if data_block is empty.
 	pendingIndexEntry bool
 	pendingHandle *BlockHandle	 // Handle to add to index block
+
+	compressedOutput []byte
 }
 
 // Create a builder that will store the contents of the table it is
 // building in *file.  Does not close the file.  It is up to the
 // caller to close the file after calling Finish().
-func newTableBuilder(options *Options, file *WritableFile) *TableBuilder {
+func newTableBuilder(options *Options, file WritableFile) *TableBuilder {
 
 	copyOptions := *options
 
@@ -123,9 +127,73 @@ func (this *TableBuilder) Add(key string, value string) {
 // the same data block.  Most clients should not need to use this method.
 // REQUIRES: Finish(), Abandon() have not been called
 func (this *TableBuilder) Flush() {
+	if (!this.ok()) {
+		return
+	}
+
+	if (this.dataBlock.Empty() ) {
+		return 
+	}
+
+	this.writeBlock(this.dataBlock, this.pendingHandle)
+
+	if (this.ok() ) {
+		this.pendingIndexEntry = true
+		this.s = this.file.Flush()
+	}
+
+	if (this.filterBlock != nil) {
+		this.filterBlock.StartBlock(this.offset)
+	}
 
 }
 
 func (this *TableBuilder) ok() bool {
 	return this.s.OK()
+}
+
+func (this *TableBuilder) writeBlock(block *BlockBuilder, handle *BlockHandle) {
+	// File format contains a sequence of blocks where each block has:
+	//    block_data: uint8[n]
+	//    type: uint8
+	//    crc: uint32
+	raw := block.Finish()
+
+	var blockContents []byte
+
+	compressionType := this.options.Compression
+
+	switch compressionType {
+	case NoCompression:
+		blockContents = raw
+	case SnappyCompression:
+		// this would be done in the future~~~
+		// for now, just do the same as NoCompression 
+		blockContents = raw
+	}
+
+	this.writeRawBlock(blockContents, compressionType, handle)
+
+	this.compressedOutput = this.compressedOutput[ :0]
+	
+	block.Reset()
+}
+
+func (this *TableBuilder) writeRawBlock(blockContents []byte, compressionType CompressionType, handle *BlockHandle) {
+	handle.offset = this.offset
+	handle.size = uint64(len(blockContents))
+	this.s = this.file.Append(blockContents)
+
+	if (this.s.OK()) {
+		trailer := make([]byte, kBlockTrailerSize)
+		trailer = append(trailer, byte(compressionType))
+		crc := utilties.Value(blockContents)
+		crc = utilties.Extend(crc, trailer)
+		encodeFixed32(trailer[1:], utilties.Mask(crc))
+		this.s = this.file.Append(trailer)
+
+		if this.s.OK() {
+			this.offset += uint64(len(blockContents) + len(trailer))
+		}
+	}
 }

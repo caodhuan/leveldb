@@ -74,7 +74,7 @@ func (this *internalKey) setFrom(p *parsedInternalKey) {
 type LookupKey struct {
 	// We construct a char array of the form:
 	//    klength  varint32               <-- 0
-	//    userkey  char[klength]          <-- kstart_
+	//    userkey  char[klength]          <-- kStart
 	//    tag      uint64
 	// The array is a suitable MemTable key.
 	// The suffix starting with "userkey" can be used as an InternalKey.
@@ -84,16 +84,16 @@ type LookupKey struct {
 
 func newLookupKey(userKey string, sequence sequenceNumber) *LookupKey {
 	var lookupKey LookupKey
-	b := encodeVarint32(uint32(len(userKey) + kKeyHead) )
-	lookupKey.kStart = len(lookupKey.space)
+
 	userKeyByte := []byte(userKey)
-	lookupKey.space = make([]byte, len(b)+ len(userKeyByte) + kKeyHead )
-	lookupKey.kStart = copy(lookupKey.space, b)
 
-	copy(lookupKey.space[lookupKey.kStart:], userKeyByte)
+	lookupKey.space = make([]byte, len(userKeyByte) + kKeyHead +  (kKeyHead / 2) )
 
-	b = encodeFixed64(packSequenceAndType(uint64(sequence), kValueTypeForSeek) )
-	copy(lookupKey.space[ len(b) + len(userKeyByte):], b)
+	lookupKey.kStart = encodeVarint32(lookupKey.space, uint32(len(userKey) + kKeyHead) )
+	
+	userKeyLen := copy(lookupKey.space[lookupKey.kStart:], userKeyByte)
+
+	encodeFixed64(lookupKey.space[lookupKey.kStart + userKeyLen:], packSequenceAndType(uint64(sequence), kValueTypeForSeek) )
 
 	return &lookupKey
 }
@@ -139,8 +139,9 @@ func extractUserKey(internalKey string) string {
 func appendInternalKey(result *string, key *parsedInternalKey) {
 	*result += key.userKey
 
+	b := make([]byte, 8)
 	// looks like go had a encoding/binary packge to process these operations
-	b := encodeFixed64(packSequenceAndType(uint64(key.sequence), key.vt))
+	encodeFixed64(b, packSequenceAndType(uint64(key.sequence), key.vt))
 
 	*result += string(b)
 }
@@ -168,35 +169,23 @@ func parseInternalKey(internalKey string, result *parsedInternalKey) bool {
 	return ValueType(c) <= kTypeValue
 }
 
-func encodeFixed64(value uint64) []byte {
-	buf := make([]byte, kKeyHead)
+func encodeFixed64(buf []byte, value uint64) int {
 	binary.PutUvarint(buf, value)
 
-	return buf
+	return kKeyHead
 }
 
-func encodeFixed32(value uint32) []byte {
-	buf := make([]byte, kKeyHead / 2)
-	
+func encodeFixed32(buf []byte, value uint32) int {
 	binary.PutUvarint(buf, uint64(value) )
-
-	return buf
+	return kKeyHead / 2
 }
 
-func encodeVarint64(value uint64) []byte {
-	buf := make([]byte, kKeyHead)
-	
-	l := binary.PutUvarint(buf, value)
-	
-	return buf[:l]
+func encodeVarint64(buf []byte, value uint64) int {
+	return binary.PutUvarint(buf, value)
 }
 
-func encodeVarint32(value uint32) []byte {
-	buf := make([]byte, kKeyHead)
-	
-	l := binary.PutUvarint(buf, uint64(value) )
-	
-	return buf[:l]
+func encodeVarint32(buf []byte, value uint32) int {
+	return binary.PutUvarint(buf, uint64(value) )
 }
 
 func decodeFixed64(value string) uint64 {

@@ -4,6 +4,9 @@ import "encoding/binary"
 // Maximum encoding length of a BlockHandle
 const kMaxEncodedLength = 10 + 10
 
+// 1 byte type + 32bit crc
+const kBlockTrailerSize = 5
+
 type BlockContents struct {
 	data []byte
 	cachable bool

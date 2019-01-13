@@ -1,6 +1,6 @@
 package leveldb
 
-type CompressionType int32
+type CompressionType byte
 
 const (
 	NoCompression = iota
