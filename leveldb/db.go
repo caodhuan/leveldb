@@ -174,8 +174,18 @@ func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internal
 
 	if result.InfoLog != nil {
 		// Open a log file in the same directory as the db
-		// options.CreateDir(dbName)
-		// options.RenameFile()
+		options.CreateDir(dbName)
+		options.RenameFile(InfoLogFileName(dbName), OldInfoLogFileName(dbName))
+		s := options.NewLogger(InfoLogFileName(dbName), &result.InfoLog)
+
+		if !s.OK() {
+			// No place suitable for logging
+			result.InfoLog = nil
+		}
+	}
+
+	if result.BlockCache == nil {
+		result.BlockCache = NewLRUCache( 8 << 20)
 	}
 
 	return result
