@@ -24,3 +24,9 @@ func getlengthPrefixedSlice(str string) string {
 
 	return remainStr
 }
+
+func newMemTable(comparator internalKeyComparator) *MemTable {
+	return &MemTable{
+		
+	}
+}

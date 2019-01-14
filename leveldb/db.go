@@ -35,13 +35,13 @@ type dbImpl struct {
 	// Lock over the persistent DB state.  Non-NULL iff successfully acquired.
 	dbLock *FileLock
 
-	// State below is protected by mutex_
-	mutex *sync.Mutex
+	// State below is protected by mutex
+	mutex sync.Mutex
 	shuttingDown *atomic.Value
 	bgCV *sync.Cond  	// Signalled when background work finishes
 	mem *MemTable	
 	imm *MemTable 		// Memtable being compacted
-	hasImm *atomic.Value	// So bg thread can detect non-NULL imm_
+	hasImm atomic.Value	// So bg thread can detect non-NULL imm
 	logFile *WritableFile
 	logFileNumber uint64
 	log *LogWriter
@@ -57,24 +57,35 @@ type dbImpl struct {
 
 	bgCompactionScheduled bool
 
+	manualCompaction *ManualCompaction
+
 	versions *VersionSet
 
 	bgError *Status
 
-	status [kNumLevels]*CompactionStatus
+	status [kNumLevels]*CompactionStats
+}
+
+// Information for a manual compaction
+type ManualCompaction struct {
+	level int
+	done bool
+	begin *internalKey	 // NULL means beginning of key range
+	end *internalKey	 // NULL means end of key range
+	tmpStore internalKey	// Used to keep track of compaction progress
 }
 
 type Writer struct {	
 
 }
 
-type CompactionStatus struct {
+type CompactionStats struct {
 	micros int64
 	bytesRead int64
 	bytesWritten int64
 }
 
-func (this *CompactionStatus) Add(other *CompactionStatus) {
+func (this *CompactionStats) Add(other *CompactionStats) {
 	this.micros += other.micros
 	this.bytesRead += other.bytesRead
 	this.bytesWritten += other.bytesWritten
@@ -105,61 +116,78 @@ func Open(options *Options, name string, db *DB) Status {
 	return s
 }
 
-func (this dbImpl) Put(writeOptions WriteOptions, key string, value string) Status {
+func (this *dbImpl) Put(writeOptions WriteOptions, key string, value string) Status {
 	s := OK()
 
 	return s
 }
 
-func (this dbImpl) Delete(writeOptions WriteOptions, key string) Status {
+func (this *dbImpl) Delete(writeOptions WriteOptions, key string) Status {
 	s := OK()
 
 	return s
 }
 
-func (this dbImpl) Write(writeOptions WriteOptions, updates *WriteBatch) Status {
+func (this *dbImpl) Write(writeOptions WriteOptions, updates *WriteBatch) Status {
 	return OK()
 }
 
-func (this dbImpl) Get(readOptions ReadOptions, key string, value *string) Status {
+func (this *dbImpl) Get(readOptions ReadOptions, key string, value *string) Status {
 	return OK()
 }
 
-func (this dbImpl) NewIterator( readOptions ReadOptions) *Iterator {
+func (this *dbImpl) NewIterator( readOptions ReadOptions) *Iterator {
 	return nil
 }
-func (this dbImpl) GetSnapshot() *Snapshot {
+func (this *dbImpl) GetSnapshot() *Snapshot {
 	return nil
 }
 
-func (this dbImpl) ReleaseSnapshot(snapshot *Snapshot) {
+func (this *dbImpl) ReleaseSnapshot(snapshot *Snapshot) {
 
 }
 
-func (this dbImpl) GetProperty(property string, value *string) bool {
+func (this *dbImpl) GetProperty(property string, value *string) bool {
 	return true
 }
 
-func (this dbImpl) GetApproximateSizes(kr *keyRange, n int32, sizes *uint64) {
+func (this *dbImpl) GetApproximateSizes(kr *keyRange, n int32, sizes *uint64) {
 
 }
 
-func (this dbImpl) CompactRange(begin string, end string) {
+func (this *dbImpl) CompactRange(begin string, end string) {
 
 }
 
 
-func makeDBImpl(options *Options, name string) dbImpl {
-	return dbImpl{
-		env: options.Env,
-		internalKeyComparator: makeInternalKeyComparator(options.Comparator),
-		internalFilterPolicy: makeInternalFilterPolicy(options.FilterPolicy),
-		dbName:name,
-	}
+func makeDBImpl(options *Options, name string) *dbImpl {
+	var impl dbImpl
+
+	impl.env = options.Env
+	impl.internalKeyComparator = makeInternalKeyComparator(options.Comparator)
+	impl.internalFilterPolicy = makeInternalFilterPolicy(options.FilterPolicy)
+	impl.options = sanitizeOptions(name, *impl.internalKeyComparator, *impl.internalFilterPolicy, options)
+	impl.dbName = name
+	impl.ownsInfoLog = options.InfoLog != impl.options.InfoLog
+	impl.ownsCache = options.BlockCache != impl.options.BlockCache
+	impl.dbLock = nil
+	impl.shuttingDown = nil
+	impl.bgCV = sync.NewCond(&impl.mutex)
+	impl.mem = newMemTable(*impl.internalKeyComparator)
+	impl.imm = nil
+	impl.logFile = nil
+	impl.logFileNumber = 0
+	impl.log = nil
+	impl.seed = 0
+	impl.tmpBatch = newWriteBatch()
+	impl.bgCompactionScheduled = false
+	impl.manualCompaction = nil
+	//impl.hasImm.Load(nil)
+	return &impl
 }
 
 
-func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internalFilterPolicy, options *Options) Options {
+func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internalFilterPolicy, options *Options) *Options {
 	result := *options
 	result.Comparator = &icmp
 	if options.FilterPolicy != nil {
@@ -188,7 +216,7 @@ func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internal
 		result.BlockCache = NewLRUCache( 8 << 20)
 	}
 
-	return result
+	return &result
 }
 
 func (this *dbImpl) recover() (*VersionEdit, Status) {
