@@ -2,7 +2,7 @@ package leveldb
 
 import (
 	"sync"
-	"sync/atomic"
+	//"sync/atomic"
 )
 
 const kNumNonTableCacheFiles = 10
@@ -37,11 +37,11 @@ type dbImpl struct {
 
 	// State below is protected by mutex
 	mutex sync.Mutex
-	shuttingDown *atomic.Value
+	shuttingDown int32
 	bgCV *sync.Cond  	// Signalled when background work finishes
 	mem *MemTable	
 	imm *MemTable 		// Memtable being compacted
-	hasImm atomic.Value	// So bg thread can detect non-NULL imm
+	hasImm int32	// So bg thread can detect non-NULL imm
 	logFile *WritableFile
 	logFileNumber uint64
 	log *LogWriter
@@ -105,11 +105,12 @@ func Open(options *Options, name string, db *DB) Status {
 	impl := makeDBImpl(options, name)
 
 	impl.mutex.Lock()
+	var edit VersionEdit
 
-	_, s := impl.recover()
+	s := impl.recover(&edit)
 
 	if s.OK() {
-
+		newLogNumber := impl.versions.NewFileNumber()
 		*db = impl
 	}
 
@@ -171,7 +172,7 @@ func makeDBImpl(options *Options, name string) *dbImpl {
 	impl.ownsInfoLog = options.InfoLog != impl.options.InfoLog
 	impl.ownsCache = options.BlockCache != impl.options.BlockCache
 	impl.dbLock = nil
-	impl.shuttingDown = nil
+	impl.shuttingDown = 0
 	impl.bgCV = sync.NewCond(&impl.mutex)
 	impl.mem = newMemTable(*impl.internalKeyComparator)
 	impl.imm = nil
@@ -182,7 +183,13 @@ func makeDBImpl(options *Options, name string) *dbImpl {
 	impl.tmpBatch = newWriteBatch()
 	impl.bgCompactionScheduled = false
 	impl.manualCompaction = nil
-	//impl.hasImm.Load(nil)
+	impl.hasImm = 0
+	
+	tableCacheSize := impl.options.MaxOpenFiles - kNumNonTableCacheFiles
+	impl.tableCache = newTableCache(impl.dbName, impl.options, int(tableCacheSize) )
+
+	impl.versions = newVersionSet(impl.dbName, impl.options, impl.tableCache, impl.internalKeyComparator)
+
 	return &impl
 }
 
@@ -219,8 +226,8 @@ func sanitizeOptions(dbName string, icmp internalKeyComparator, ipolicy internal
 	return &result
 }
 
-func (this *dbImpl) recover() (*VersionEdit, Status) {
-	return nil, OK()
+func (this *dbImpl) recover(edit *VersionEdit) Status {
+	return OK()
 }
 
 func ClipToRangeUint64(value *uint64, minValue uint64, maxValue uint64) {

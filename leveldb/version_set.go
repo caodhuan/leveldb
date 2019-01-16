@@ -36,6 +36,19 @@ type Version struct {
 	CompactionLevel	int
 }
 
+func newVersion(vSet *VersionSet) *Version {
+	var v Version
+	v.vSet = vSet
+	v.next = &v
+	v.prev = &v
+	v.fileToCompact = nil
+	v.fileToCompactLevel = 0
+	v.compactionScore = -1
+	v.CompactionLevel = -1
+
+	return &v
+}
+
 type VersionSet struct {
 	Env
 	dbName string
@@ -52,12 +65,43 @@ type VersionSet struct {
 	descriptorFile *WritableFile
 	descriptorLog *LogWriter
 	dummyVersions *Version // Head of circular doubly-linked list of versions.
-	current *Version	// == dummy_versions_.prev_
+	current *Version	// == dummyVersions.prev
 
 	// Per-level key at which the next compaction at that level should start.
 	// Either an empty string, or a valid InternalKey.
 	CompactPointer [kNumLevels]string
 }
+
+func newVersionSet( dbName string, options *Options, tableCache *TableCache, internalKeyComparator *internalKeyComparator) *VersionSet {
+	var versionSet VersionSet
+	versionSet.Env = options.Env
+	versionSet.dbName = dbName
+	versionSet.tableCache = tableCache
+	versionSet.icmp = internalKeyComparator
+	versionSet.nextFileNumber = 2
+	versionSet.mainfestFileNumber = 0 // filled by Recover()
+	versionSet.lastSequence = 0
+	versionSet.logNumber = 0
+	versionSet.prevLogNumber = 0
+	versionSet.descriptorFile = nil
+	versionSet.descriptorLog = nil
+	versionSet.dummyVersions = newVersion(&versionSet)
+	versionSet.current = nil
+
+	versionSet.AppendVersion(newVersion(&versionSet))
+
+	return &versionSet
+}
+
+func (this *VersionSet) AppendVersion(v *Version) {
+	this.current = v
+
+	v.prev = this.dummyVersions.prev
+	v.next = this.dummyVersions
+	v.prev.next = v
+	v.prev.prev = v
+}
+
 
 // Append to *iters a sequence of iterators that will
 // yield the contents of this Version when merged together.
