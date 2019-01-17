@@ -102,6 +102,12 @@ func (this *VersionSet) AppendVersion(v *Version) {
 	v.prev.prev = v
 }
 
+// Allocate and return a new file number
+func (this *VersionSet) NewFileNumber() uint64 {
+	result := this.nextFileNumber
+	this.nextFileNumber += 1
+	return result
+}
 
 // Append to *iters a sequence of iterators that will
 // yield the contents of this Version when merged together.
