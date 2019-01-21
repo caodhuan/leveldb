@@ -2,6 +2,7 @@ package leveldb
 
 import (
 	"sort"
+	"sync"
 )
 
 const (
@@ -109,6 +110,10 @@ func (this *VersionSet) NewFileNumber() uint64 {
 	return result
 }
 
+func (this *VersionSet) LogAndApply(edit *VersionEdit, mu *sync.Mutex) Status {
+	return OK()
+}
+
 // Append to *iters a sequence of iterators that will
 // yield the contents of this Version when merged together.
 // REQUIRES: This version has been saved (see VersionSet::SaveTo)
@@ -210,6 +215,8 @@ func (this *Version) Get(readOptions *ReadOptions, key LookupKey, value *string)
 	
 	return seekFile, seekFileLevel, status
 }
+
+
 
 func FindFile(icmp *internalKeyComparator, files []*FileMetaData, key string) int {
 	left := 0

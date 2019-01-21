@@ -13,7 +13,7 @@ const (
 )
 
 func makeFileName(name string, number uint64, suffix string) string {
-	buf := fmt.Sprintf("/%06llu.%s", number, suffix)
+	buf := fmt.Sprintf("/%06d.%s", number, suffix)
 	return name + buf;
 }
 

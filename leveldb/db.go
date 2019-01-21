@@ -105,14 +105,34 @@ func Open(options *Options, name string, db *DB) Status {
 	impl := makeDBImpl(options, name)
 
 	impl.mutex.Lock()
-	var edit VersionEdit
+	edit := newVersionEdit()
 
-	s := impl.recover(&edit)
+	s := impl.recover(edit)
 
 	if s.OK() {
 		newLogNumber := impl.versions.NewFileNumber()
-		*db = impl
+		var lfile WritableFile
+		s = options.Env.NewWritableFile(LogFileName(name, newLogNumber), &lfile)
+
+		if s.OK() {
+			edit.SetLogNumber(newLogNumber)
+			impl.logFile = &lfile
+			impl.log = newLogWriter(&lfile)
+
+			s = impl.versions.LogAndApply(edit, &impl.mutex)
+		}
+
+		if s.OK() {
+			//impl.DeleteObsoleteFiles()
+			//impl.MaybeScheduleCompaction()
+		}
 	}
+
+	impl.mutex.Unlock()
+
+	if s.OK() {
+		*db = impl
+	} 
 
 	return s
 }
