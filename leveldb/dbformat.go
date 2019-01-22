@@ -239,3 +239,42 @@ func getVarint32(value string) (string, uint32) {
 
 	return value[l:], uint32(result)
 }
+
+
+func putVarint32(dst *[]byte, start int, value uint32) int {
+	buffLen := len((*dst)[:start] )
+	if buffLen < kKeyHead / 2 {
+		tmp := make([]byte, start + kKeyHead / 2)
+		copy(tmp, *dst)
+		*dst = tmp
+	}
+
+	return encodeVarint32((*dst)[:start], value)
+}
+
+func putVarint64(dst *[]byte, start int, value uint64) int {
+	buffLen := len(*dst)
+	if buffLen < kKeyHead  {
+		tmp := make([]byte, start + kKeyHead)
+		copy(tmp, *dst)
+		*dst = tmp
+	}
+
+	return encodeVarint64((*dst)[:start], value)
+}
+
+
+func putLengthPrefixedSlice(dst *[]byte, start int, value string) int {
+	l := putVarint32(dst, start, uint32(len(value)) )
+
+	bytes := []byte(value)
+	if len((*dst)[:start + l]) < len(bytes) {
+		tmp := make([]byte, start + len(bytes) + l)
+		copy(tmp, *dst)
+		*dst = tmp
+	}
+
+	copy((*dst)[:start + l], bytes)
+
+	return l + len(bytes)
+}

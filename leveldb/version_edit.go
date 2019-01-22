@@ -2,6 +2,17 @@ package leveldb
 
 import "strconv"
 
+const (
+	kComparator = iota
+	kLogNumber
+	kNextFileNumber
+	kLastSequence
+	kCompactPointer
+	kDeletedFile
+	kNewFile
+	// 8 was used for large value refs
+	kPrevLogNumber = 9 
+)
 type FileMetaData struct {
 	// Seeks allowed until compaction
 	allowedSeeks int
@@ -151,11 +162,50 @@ func (this *VersionEdit)DeleteFile(level int, file uint64) {
 	}
 }
 
-func (this *VersionEdit) EncodeTo(dst []byte) {
+func (this *VersionEdit) EncodeTo(dst* []byte, start int) int {
+	if this.hasComparator {
+		start += putVarint32(dst, start, kComparator)
+		start += putLengthPrefixedSlice(dst, start, this.comparator)
+	}
+
+	if this.hasLogNumber {
+		start += putVarint32(dst, start, kLogNumber)
+		start += putVarint64(dst, start, this.logNumber)
+	}
+
+	if this.hasPrevLogNumber {
+		start += putVarint32(dst, start, kPrevLogNumber)
+		start += putVarint64(dst, start, this.prevLogNumber)
+	}
+
+	if this.hasNextFileNumber {
+		start += putVarint32(dst, start, kNextFileNumber)
+		start += putVarint64(dst, start, this.nextFileNumber)
+	}
+
+	if this.hasLastSequence {
+		start += putVarint32(dst, start, kLastSequence)
+		start += putVarint64(dst, start, uint64(this.lastSequence) )
+	}
+
+
 }
 
-func (this *VersionEdit) DecodeFrom(src []byte) {
+func (this *VersionEdit) DecodeFrom(src []byte) Status {
+	return OK()
 }
 
 func (this *VersionEdit) DebugString() string {
+	var result string
+	
+	result += "VersionEdit {"
+
+	if this.hasComparator {
+		result += "\n	Comparator: "
+		result += this.comparator
+	}
+
+
+
+	return result
 }
