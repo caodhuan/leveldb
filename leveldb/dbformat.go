@@ -228,7 +228,7 @@ func getVarint64(value string) (string, uint64) {
 
 // Standard Get... routines parse a value from the beginning of a Slice
 // and advance the slice past the parsed value.
-func getVarint32(value string) (string, uint32) {
+func getVarint32(value []byte) ([]byte, uint32) {
 	if len(value) != (kKeyHead / 2) {
 		return value, 0
 	}

@@ -188,10 +188,41 @@ func (this *VersionEdit) EncodeTo(dst* []byte, start int) int {
 		start += putVarint64(dst, start, uint64(this.lastSequence) )
 	}
 
+	for _, v := range this.compactPointers {
+		start += putVarint32(dst, start, kCompactPointer)
+		start += putVarint32(dst, start, uint32(v.level) )
+		start += putLengthPrefixedSlice(dst, start, v.key.encode())
+	}
 
+	for _, v := range this.deletedFiles {
+		start += putVarint32(dst, start, kDeletedFile)
+		start += putVarint32(dst, start, uint32(v.level) )
+		start += putVarint64(dst, start, v.file)
+	}
+
+	for _, v := range this.newFiles {
+		f := v.FileMetaData
+		start += putVarint32(dst, start, kNewFile)
+		start += putVarint32(dst, start, uint32(v.level) )
+		start += putVarint64(dst, start, f.number)
+		start += putVarint64(dst, start, f.fileSize)
+		start += putLengthPrefixedSlice(dst, start, f.smallest.encode())
+		start += putLengthPrefixedSlice(dst, start, f.largest.encode())
+	}
 }
 
 func (this *VersionEdit) DecodeFrom(src []byte) Status {
+	this.Clear()
+
+
+	// Temporary storage for parsing
+	var level int 
+	var number uint64
+	var f FileMetaData
+	var key internalKey
+
+	//for len(src) >= 0 && getVarint32()
+
 	return OK()
 }
 
